@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from dotenv import load_dotenv
 import os
 import psycopg
+from apps.api.routers.jobs import router as jobs_router
 
 load_dotenv("apps/api/.env")
 
@@ -18,3 +19,6 @@ def database_health():
     conn = psycopg.connect(os.environ["DATABASE_URL"])
     conn.close()
     return {"database": "connected"}
+
+
+app.include_router(jobs_router)
