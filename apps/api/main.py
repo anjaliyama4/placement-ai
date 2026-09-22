@@ -2,7 +2,9 @@ from fastapi import FastAPI
 from dotenv import load_dotenv
 import os
 import psycopg
+
 from apps.api.routers.jobs import router as jobs_router
+from apps.api.routers.students import router as students_router
 
 load_dotenv("apps/api/.env")
 
@@ -22,3 +24,4 @@ def database_health():
 
 
 app.include_router(jobs_router)
+app.include_router(students_router)
