@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getAuthUser, logoutUser, type AuthUser } from "./auth";
 
 type Student = {
   id: number;
@@ -64,6 +65,7 @@ type Analytics = {
 };
 
 export default function Home() {
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [student, setStudent] = useState<Student | null>(null);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [allSkills, setAllSkills] = useState<Skill[]>([]);
@@ -86,7 +88,7 @@ export default function Home() {
   const [applyingJob, setApplyingJob] = useState<number | null>(null);
   const [applicationMessage, setApplicationMessage] = useState("");
 
-  async function loadDashboard() {
+  async function loadDashboard(studentId: number) {
     try {
       const [
         studentData,
@@ -96,27 +98,27 @@ export default function Home() {
         jobData,
         analyticsData,
       ] = await Promise.all([
-        fetch("http://127.0.0.1:8000/students/").then((res) =>
+        fetch("http://127.0.0.1:8001/students/").then((res) =>
           res.json()
         ),
-        fetch("http://127.0.0.1:8000/skills/student/1").then((res) =>
+        fetch(`http://127.0.0.1:8001/skills/student/${authUser?.student_id}`).then((res) =>
           res.json()
         ),
-        fetch("http://127.0.0.1:8000/skills/").then((res) =>
+        fetch("http://127.0.0.1:8001/skills/").then((res) =>
           res.json()
         ),
-        fetch("http://127.0.0.1:8000/applications/student/1").then(
+        fetch(`http://127.0.0.1:8001/applications/student/${studentId}`).then(
           (res) => res.json()
         ),
-        fetch("http://127.0.0.1:8000/jobs/").then((res) =>
+        fetch("http://127.0.0.1:8001/jobs/").then((res) =>
           res.json()
         ),
-        fetch("http://127.0.0.1:8000/analytics/student/1").then(
+        fetch(`http://127.0.0.1:8001/analytics/student/${studentId}`).then(
           (res) => res.json()
         ),
       ]);
 
-      setStudent(studentData.students[0] ?? null);
+      setStudent(studentData.students.find((item: Student) => item.id === studentId) ?? null);
       setSkills(skillData.skills);
       setAllSkills(allSkillData.skills);
       setApplications(applicationData.applications);
@@ -127,7 +129,7 @@ export default function Home() {
       }
 
       const careerResponse = await fetch(
-        "http://127.0.0.1:8000/career/student/1"
+        `http://127.0.0.1:8001/career/student/${studentId}`
       );
 
       if (careerResponse.ok) {
@@ -138,7 +140,7 @@ export default function Home() {
       const matchResults = await Promise.all(
         jobData.jobs.map(async (job: Job) => {
           const response = await fetch(
-            `http://127.0.0.1:8000/matching/student/1/job/${job.id}`
+            `http://127.0.0.1:8001/matching/student/${studentId}/job/${job.id}`
           );
 
           return [job.id, await response.json()] as const;
@@ -152,7 +154,11 @@ export default function Home() {
   }
 
   useEffect(() => {
-    loadDashboard();
+    const user = getAuthUser();
+    setAuthUser(user);
+    if (user?.student_id) {
+      loadDashboard(user.student_id);
+    }
   }, []);
 
   async function addSkill() {
@@ -161,7 +167,7 @@ export default function Home() {
     setAddingSkill(true);
 
     try {
-      await fetch("http://127.0.0.1:8000/skills/student/1", {
+      await fetch(`http://127.0.0.1:8001/skills/student/${authUser?.student_id}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -175,7 +181,9 @@ export default function Home() {
       setSelectedSkill("");
       setProficiency("Beginner");
 
-      await loadDashboard();
+      if (authUser?.student_id) {
+        await loadDashboard(authUser.student_id);
+      }
     } finally {
       setAddingSkill(false);
     }
@@ -192,7 +200,7 @@ export default function Home() {
       formData.append("file", resumeFile);
 
       const response = await fetch(
-        "http://127.0.0.1:8000/resumes/student/1",
+        `http://127.0.0.1:8001/resumes/student/${authUser?.student_id}`,
         {
           method: "POST",
           body: formData,
@@ -211,7 +219,9 @@ export default function Home() {
         );
 
         setResumeFile(null);
-        await loadDashboard();
+        if (authUser?.student_id) {
+        await loadDashboard(authUser.student_id);
+      }
       } else {
         setResumeMessage(data.detail || "Resume upload failed.");
       }
@@ -229,14 +239,14 @@ export default function Home() {
 
     try {
       const response = await fetch(
-        "http://127.0.0.1:8000/applications/",
+        "http://127.0.0.1:8001/applications/",
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            student_id: 1,
+            student_id: authUser?.student_id,
             job_id: jobId,
           }),
         }
@@ -246,7 +256,9 @@ export default function Home() {
 
       if (response.ok) {
         setApplicationMessage(data.message);
-        await loadDashboard();
+        if (authUser?.student_id) {
+        await loadDashboard(authUser.student_id);
+      }
       } else {
         setApplicationMessage("Application failed.");
       }
@@ -706,3 +718,8 @@ export default function Home() {
     </main>
   );
 }
+
+
+
+
+

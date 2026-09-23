@@ -46,3 +46,6 @@ app.include_router(career_router)
 
 from apps.api.routers.analytics import router as analytics_router
 app.include_router(analytics_router)
+
+from apps.api.routers.auth import router as auth_router
+app.include_router(auth_router)
