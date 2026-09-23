@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { authenticatedFetch, getAuthUser, logoutUser, type AuthUser } from "./auth";
+import ProfileEditor from "./ProfileEditor";
+import AuthScreen from "./AuthScreen";
 
 type Student = {
   id: number;
@@ -119,10 +121,10 @@ export default function Home() {
       ]);
 
       setStudent(studentData.students.find((item: Student) => item.id === studentId) ?? null);
-      setSkills(skillData.skills);
-      setAllSkills(allSkillData.skills);
-      setApplications(applicationData.applications);
-      setJobs(jobData.jobs);
+      setSkills(skillData.skills ?? []);
+      setAllSkills(allSkillData.skills ?? []);
+      setApplications(applicationData.applications ?? []);
+      setJobs(jobData.jobs ?? [])
 
       if (!analyticsData.detail) {
         setAnalytics(analyticsData);
@@ -294,6 +296,19 @@ export default function Home() {
         )
       : 0;
 
+  if (!authUser) {
+    return (
+      <AuthScreen
+        onAuthenticated={(user) => {
+          setAuthUser(user);
+          if (user.student_id) {
+            loadDashboard(user.student_id);
+          }
+        }}
+      />
+    );
+  }
+
   return (
     <main className="min-h-screen bg-gray-50 p-8">
       <div className="mx-auto max-w-6xl">
@@ -316,6 +331,13 @@ export default function Home() {
               {student.cgpa}
             </p>
           </section>
+        )}
+
+        {authUser?.student_id && (
+          <ProfileEditor
+            studentId={authUser.student_id}
+            onUpdated={() => loadDashboard(authUser.student_id!)}
+          />
         )}
 
         {analytics && (
@@ -718,6 +740,13 @@ export default function Home() {
     </main>
   );
 }
+
+
+
+
+
+
+
 
 
 
