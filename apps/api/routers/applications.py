@@ -28,3 +28,32 @@ def get_applications():
     ]
 
     return {"applications": applications}
+
+
+@router.get("/student/{student_id}")
+def get_student_applications(student_id: int):
+    with get_connection() as conn:
+        rows = conn.execute(
+            """
+            SELECT a.id, a.job_id, j.title, j.company, a.status, a.applied_at
+            FROM applications a
+            JOIN jobs j ON j.id = a.job_id
+            WHERE a.student_id = %s
+            ORDER BY a.applied_at DESC
+            """,
+            (student_id,),
+        ).fetchall()
+
+    applications = [
+        {
+            "id": row[0],
+            "job_id": row[1],
+            "job_title": row[2],
+            "company": row[3],
+            "status": row[4],
+            "applied_at": row[5],
+        }
+        for row in rows
+    ]
+
+    return {"student_id": student_id, "applications": applications}
