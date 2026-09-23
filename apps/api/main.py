@@ -9,6 +9,7 @@ from apps.api.routers.students import router as students_router
 from apps.api.routers.skills import router as skills_router
 from apps.api.routers.applications import router as applications_router
 from apps.api.routers.matching import router as matching_router
+from apps.api.routers.resumes import router as resumes_router
 
 load_dotenv("apps/api/.env")
 
@@ -39,3 +40,4 @@ app.include_router(students_router)
 app.include_router(skills_router)
 app.include_router(applications_router)
 app.include_router(matching_router)
+app.include_router(resumes_router)

@@ -4,3 +4,5 @@ apps/web/.next/
 __pycache__/
 *.pyc
 .env
+
+apps/api/uploads/
