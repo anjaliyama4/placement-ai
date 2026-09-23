@@ -90,6 +90,24 @@ export function getAuthUser(): AuthUser | null {
   }
 }
 
+export async function authenticatedFetch(
+  url: string,
+  options: RequestInit = {}
+): Promise<Response> {
+  const token = getAuthToken();
+
+  const headers = new Headers(options.headers);
+
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  return fetch(url, {
+    ...options,
+    headers,
+  });
+}
+
 export function logoutUser() {
   localStorage.removeItem("placement_ai_token");
   localStorage.removeItem("placement_ai_user");

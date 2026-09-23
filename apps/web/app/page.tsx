@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getAuthUser, logoutUser, type AuthUser } from "./auth";
+import { authenticatedFetch, getAuthUser, logoutUser, type AuthUser } from "./auth";
 
 type Student = {
   id: number;
@@ -98,22 +98,22 @@ export default function Home() {
         jobData,
         analyticsData,
       ] = await Promise.all([
-        fetch("http://127.0.0.1:8001/students/").then((res) =>
+        authenticatedFetch("http://127.0.0.1:8001/students/").then((res) =>
           res.json()
         ),
-        fetch(`http://127.0.0.1:8001/skills/student/${authUser?.student_id}`).then((res) =>
+        authenticatedFetch(`http://127.0.0.1:8001/skills/student/${authUser?.student_id}`).then((res) =>
           res.json()
         ),
-        fetch("http://127.0.0.1:8001/skills/").then((res) =>
+        authenticatedFetch("http://127.0.0.1:8001/skills/").then((res) =>
           res.json()
         ),
-        fetch(`http://127.0.0.1:8001/applications/student/${studentId}`).then(
+        authenticatedFetch(`http://127.0.0.1:8001/applications/student/${studentId}`).then(
           (res) => res.json()
         ),
-        fetch("http://127.0.0.1:8001/jobs/").then((res) =>
+        authenticatedFetch("http://127.0.0.1:8001/jobs/").then((res) =>
           res.json()
         ),
-        fetch(`http://127.0.0.1:8001/analytics/student/${studentId}`).then(
+        authenticatedFetch(`http://127.0.0.1:8001/analytics/student/${studentId}`).then(
           (res) => res.json()
         ),
       ]);
@@ -128,7 +128,7 @@ export default function Home() {
         setAnalytics(analyticsData);
       }
 
-      const careerResponse = await fetch(
+      const careerResponse = await authenticatedFetch(
         `http://127.0.0.1:8001/career/student/${studentId}`
       );
 
@@ -139,7 +139,7 @@ export default function Home() {
 
       const matchResults = await Promise.all(
         jobData.jobs.map(async (job: Job) => {
-          const response = await fetch(
+          const response = await authenticatedFetch(
             `http://127.0.0.1:8001/matching/student/${studentId}/job/${job.id}`
           );
 
@@ -167,7 +167,7 @@ export default function Home() {
     setAddingSkill(true);
 
     try {
-      await fetch(`http://127.0.0.1:8001/skills/student/${authUser?.student_id}`, {
+      await authenticatedFetch(`http://127.0.0.1:8001/skills/student/${authUser?.student_id}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -199,7 +199,7 @@ export default function Home() {
       const formData = new FormData();
       formData.append("file", resumeFile);
 
-      const response = await fetch(
+      const response = await authenticatedFetch(
         `http://127.0.0.1:8001/resumes/student/${authUser?.student_id}`,
         {
           method: "POST",
@@ -238,7 +238,7 @@ export default function Home() {
     setApplicationMessage("");
 
     try {
-      const response = await fetch(
+      const response = await authenticatedFetch(
         "http://127.0.0.1:8001/applications/",
         {
           method: "POST",

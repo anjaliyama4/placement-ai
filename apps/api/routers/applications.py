@@ -1,7 +1,8 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from apps.api.db.connection import get_connection
+from apps.api.security import get_current_user_id
 
 router = APIRouter(
     prefix="/applications",
@@ -14,15 +15,39 @@ class ApplicationRequest(BaseModel):
     job_id: int
 
 
+def owns_student(conn, student_id: int, user_id: int) -> bool:
+    row = conn.execute(
+        """
+        SELECT id
+        FROM student_profiles
+        WHERE id = %s
+          AND user_id = %s
+        """,
+        (student_id, user_id),
+    ).fetchone()
+
+    return row is not None
+
+
 @router.get("/")
-def get_applications():
+def get_applications(
+    current_user_id: int = Depends(get_current_user_id),
+):
     with get_connection() as conn:
         rows = conn.execute(
             """
-            SELECT id, student_id, job_id, status, applied_at
-            FROM applications
-            ORDER BY applied_at DESC
-            """
+            SELECT
+                a.id,
+                a.student_id,
+                a.job_id,
+                a.status,
+                a.applied_at
+            FROM applications a
+            JOIN student_profiles sp ON sp.id = a.student_id
+            WHERE sp.user_id = %s
+            ORDER BY a.applied_at DESC
+            """,
+            (current_user_id,),
         ).fetchall()
 
     applications = [
@@ -40,8 +65,17 @@ def get_applications():
 
 
 @router.get("/student/{student_id}")
-def get_student_applications(student_id: int):
+def get_student_applications(
+    student_id: int,
+    current_user_id: int = Depends(get_current_user_id),
+):
     with get_connection() as conn:
+        if not owns_student(conn, student_id, current_user_id):
+            return {
+                "student_id": student_id,
+                "applications": [],
+            }
+
         rows = conn.execute(
             """
             SELECT
@@ -78,8 +112,20 @@ def get_student_applications(student_id: int):
 
 
 @router.post("/")
-def apply_to_job(application: ApplicationRequest):
+def apply_to_job(
+    application: ApplicationRequest,
+    current_user_id: int = Depends(get_current_user_id),
+):
     with get_connection() as conn:
+        if not owns_student(
+            conn,
+            application.student_id,
+            current_user_id,
+        ):
+            return {
+                "message": "Student not found",
+            }
+
         existing = conn.execute(
             """
             SELECT id, status
@@ -87,7 +133,10 @@ def apply_to_job(application: ApplicationRequest):
             WHERE student_id = %s
               AND job_id = %s
             """,
-            (application.student_id, application.job_id),
+            (
+                application.student_id,
+                application.job_id,
+            ),
         ).fetchone()
 
         if existing:
