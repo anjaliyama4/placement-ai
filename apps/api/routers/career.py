@@ -64,6 +64,41 @@ def career_intelligence(student_id: int):
     if "react" not in skill_set:
         recommendations.append("Build a React project")
 
+    # Career readiness score
+    readiness_score = 0
+
+    if len(skill_names) >= 3:
+        readiness_score += 25
+
+    if len(skill_names) >= 5:
+        readiness_score += 15
+
+    if "python" in skill_set:
+        readiness_score += 15
+
+    if "sql" in skill_set:
+        readiness_score += 15
+
+    if "git" in skill_set:
+        readiness_score += 10
+
+    if "javascript" in skill_set or "react" in skill_set:
+        readiness_score += 10
+
+    if student[3] is not None and float(student[3]) >= 7.0:
+        readiness_score += 10
+
+    readiness_score = min(readiness_score, 100)
+
+    if readiness_score >= 80:
+        readiness_level = "Highly Ready"
+    elif readiness_score >= 60:
+        readiness_level = "Career Ready"
+    elif readiness_score >= 40:
+        readiness_level = "Developing"
+    else:
+        readiness_level = "Getting Started"
+
     return {
         "student": {
             "name": student[0],
@@ -74,4 +109,6 @@ def career_intelligence(student_id: int):
         "current_skills": skill_names,
         "career_paths": career_paths,
         "recommendations": recommendations[:4],
+        "readiness_score": readiness_score,
+        "readiness_level": readiness_level,
     }

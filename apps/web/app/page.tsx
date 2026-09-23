@@ -50,6 +50,8 @@ type CareerIntelligence = {
   current_skills: string[];
   career_paths: string[];
   recommendations: string[];
+  readiness_score: number;
+  readiness_level: string;
 };
 
 export default function Home() {
@@ -375,14 +377,41 @@ export default function Home() {
 
         {career && (
           <section className="mt-8 rounded-xl bg-white p-6 shadow">
-            <h2 className="text-xl font-semibold">
-              AI Career Intelligence
-            </h2>
+            <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+              <div>
+                <h2 className="text-xl font-semibold">
+                  AI Career Intelligence
+                </h2>
 
-            <p className="mt-2 text-gray-600">
-              Personalized career guidance based on your
-              current profile and skills.
-            </p>
+                <p className="mt-2 text-gray-600">
+                  Personalized career guidance based on your
+                  current profile and skills.
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-gray-100 px-8 py-5 text-center">
+                <p className="text-sm font-medium text-gray-500">
+                  Career Readiness
+                </p>
+
+                <p className="mt-1 text-4xl font-bold">
+                  {career.readiness_score}%
+                </p>
+
+                <p className="mt-1 font-semibold">
+                  {career.readiness_level}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 h-3 overflow-hidden rounded-full bg-gray-200">
+              <div
+                className="h-full rounded-full bg-black transition-all"
+                style={{
+                  width: `${career.readiness_score}%`,
+                }}
+              />
+            </div>
 
             <div className="mt-5 grid gap-4 md:grid-cols-2">
               <div className="rounded-lg bg-gray-50 p-4">
