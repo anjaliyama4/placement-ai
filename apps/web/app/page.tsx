@@ -25,10 +25,17 @@ type Application = {
   status: string;
 };
 
+type Match = {
+  match_percentage: number;
+  matched_skills: string[];
+  missing_skills: string[];
+};
+
 export default function Home() {
   const [student, setStudent] = useState<Student | null>(null);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
+  const [match, setMatch] = useState<Match | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -37,10 +44,14 @@ export default function Home() {
       fetch("http://127.0.0.1:8000/applications/student/1").then((res) =>
         res.json()
       ),
-    ]).then(([studentData, skillData, applicationData]) => {
+      fetch("http://127.0.0.1:8000/matching/student/1/job/1").then((res) =>
+        res.json()
+      ),
+    ]).then(([studentData, skillData, applicationData, matchData]) => {
       setStudent(studentData.students[0] ?? null);
       setSkills(skillData.skills);
       setApplications(applicationData.applications);
+      setMatch(matchData);
     });
   }, []);
 
@@ -80,6 +91,30 @@ export default function Home() {
             ))}
           </div>
         </section>
+
+        {match && (
+          <section className="mt-8 rounded-xl bg-white p-6 shadow">
+            <h2 className="text-xl font-semibold">Job Match</h2>
+
+            <p className="mt-3 text-3xl font-bold">
+              {match.match_percentage}%
+            </p>
+
+            <p className="mt-1 text-gray-600">
+              Skill match for Software Engineering Intern
+            </p>
+
+            <div className="mt-5">
+              <h3 className="font-semibold">Matched Skills</h3>
+              <p className="mt-2">{match.matched_skills.join(", ")}</p>
+            </div>
+
+            <div className="mt-5">
+              <h3 className="font-semibold">Missing Skills</h3>
+              <p className="mt-2">{match.missing_skills.join(", ")}</p>
+            </div>
+          </section>
+        )}
 
         <section className="mt-8">
           <h2 className="text-xl font-semibold">Applications</h2>
