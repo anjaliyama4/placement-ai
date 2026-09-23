@@ -41,3 +41,5 @@ app.include_router(skills_router)
 app.include_router(applications_router)
 app.include_router(matching_router)
 app.include_router(resumes_router)
+from apps.api.routers.career import router as career_router
+app.include_router(career_router)

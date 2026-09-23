@@ -40,6 +40,18 @@ type Match = {
   missing_skills: string[];
 };
 
+type CareerIntelligence = {
+  student: {
+    name: string;
+    degree: string;
+    graduation_year: number;
+    cgpa: number;
+  };
+  current_skills: string[];
+  career_paths: string[];
+  recommendations: string[];
+};
+
 export default function Home() {
   const [student, setStudent] = useState<Student | null>(null);
   const [skills, setSkills] = useState<Skill[]>([]);
@@ -47,6 +59,8 @@ export default function Home() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [matches, setMatches] = useState<Record<number, Match>>({});
+  const [career, setCareer] =
+    useState<CareerIntelligence | null>(null);
 
   const [selectedSkill, setSelectedSkill] = useState("");
   const [proficiency, setProficiency] = useState("Beginner");
@@ -90,6 +104,15 @@ export default function Home() {
       setAllSkills(allSkillData.skills);
       setApplications(applicationData.applications);
       setJobs(jobData.jobs);
+
+      const careerResponse = await fetch(
+        "http://127.0.0.1:8000/career/student/1"
+      );
+
+      if (careerResponse.ok) {
+        const careerData = await careerResponse.json();
+        setCareer(careerData);
+      }
 
       const matchResults = await Promise.all(
         jobData.jobs.map(async (job: Job) => {
@@ -349,6 +372,45 @@ export default function Home() {
             </button>
           </div>
         </section>
+
+        {career && (
+          <section className="mt-8 rounded-xl bg-white p-6 shadow">
+            <h2 className="text-xl font-semibold">
+              AI Career Intelligence
+            </h2>
+
+            <p className="mt-2 text-gray-600">
+              Personalized career guidance based on your
+              current profile and skills.
+            </p>
+
+            <div className="mt-5 grid gap-4 md:grid-cols-2">
+              <div className="rounded-lg bg-gray-50 p-4">
+                <h3 className="font-semibold">
+                  Suggested Career Paths
+                </h3>
+
+                <ul className="mt-3 list-disc pl-5">
+                  {career.career_paths.map((path) => (
+                    <li key={path}>{path}</li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="rounded-lg bg-gray-50 p-4">
+                <h3 className="font-semibold">
+                  Recommended Next Steps
+                </h3>
+
+                <ul className="mt-3 list-disc pl-5">
+                  {career.recommendations.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </section>
+        )}
 
         <section className="mt-8">
           <h2 className="text-xl font-semibold">
