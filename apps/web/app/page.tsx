@@ -54,6 +54,15 @@ type CareerIntelligence = {
   readiness_level: string;
 };
 
+type Analytics = {
+  student_id: number;
+  student_name: string;
+  total_jobs: number;
+  skills_count: number;
+  applications_count: number;
+  application_status: Record<string, number>;
+};
+
 export default function Home() {
   const [student, setStudent] = useState<Student | null>(null);
   const [skills, setSkills] = useState<Skill[]>([]);
@@ -63,6 +72,8 @@ export default function Home() {
   const [matches, setMatches] = useState<Record<number, Match>>({});
   const [career, setCareer] =
     useState<CareerIntelligence | null>(null);
+  const [analytics, setAnalytics] =
+    useState<Analytics | null>(null);
 
   const [selectedSkill, setSelectedSkill] = useState("");
   const [proficiency, setProficiency] = useState("Beginner");
@@ -83,6 +94,7 @@ export default function Home() {
         allSkillData,
         applicationData,
         jobData,
+        analyticsData,
       ] = await Promise.all([
         fetch("http://127.0.0.1:8000/students/").then((res) =>
           res.json()
@@ -99,6 +111,9 @@ export default function Home() {
         fetch("http://127.0.0.1:8000/jobs/").then((res) =>
           res.json()
         ),
+        fetch("http://127.0.0.1:8000/analytics/student/1").then(
+          (res) => res.json()
+        ),
       ]);
 
       setStudent(studentData.students[0] ?? null);
@@ -106,6 +121,10 @@ export default function Home() {
       setAllSkills(allSkillData.skills);
       setApplications(applicationData.applications);
       setJobs(jobData.jobs);
+
+      if (!analyticsData.detail) {
+        setAnalytics(analyticsData);
+      }
 
       const careerResponse = await fetch(
         "http://127.0.0.1:8000/career/student/1"
@@ -252,6 +271,17 @@ export default function Home() {
       (matches[a.id]?.match_percentage ?? 0)
   );
 
+  const averageMatch =
+    jobs.length > 0
+      ? Math.round(
+          jobs.reduce(
+            (total, job) =>
+              total + (matches[job.id]?.match_percentage ?? 0),
+            0
+          ) / jobs.length
+        )
+      : 0;
+
   return (
     <main className="min-h-screen bg-gray-50 p-8">
       <div className="mx-auto max-w-6xl">
@@ -273,6 +303,81 @@ export default function Home() {
               Graduation: {student.graduation_year} · CGPA:{" "}
               {student.cgpa}
             </p>
+          </section>
+        )}
+
+        {analytics && (
+          <section className="mt-6">
+            <h2 className="text-xl font-semibold">
+              Placement Analytics
+            </h2>
+
+            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-xl bg-white p-5 shadow">
+                <p className="text-sm text-gray-500">
+                  Available Jobs
+                </p>
+
+                <p className="mt-2 text-3xl font-bold">
+                  {analytics.total_jobs}
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-white p-5 shadow">
+                <p className="text-sm text-gray-500">
+                  Applications
+                </p>
+
+                <p className="mt-2 text-3xl font-bold">
+                  {analytics.applications_count}
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-white p-5 shadow">
+                <p className="text-sm text-gray-500">
+                  Skills
+                </p>
+
+                <p className="mt-2 text-3xl font-bold">
+                  {analytics.skills_count}
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-white p-5 shadow">
+                <p className="text-sm text-gray-500">
+                  Average Job Match
+                </p>
+
+                <p className="mt-2 text-3xl font-bold">
+                  {averageMatch}%
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-xl bg-white p-5 shadow">
+              <h3 className="font-semibold">
+                Application Status
+              </h3>
+
+              <div className="mt-3 flex flex-wrap gap-3">
+                {Object.entries(
+                  analytics.application_status
+                ).map(([status, count]) => (
+                  <div
+                    key={status}
+                    className="rounded-lg bg-gray-100 px-4 py-3"
+                  >
+                    <span className="font-medium capitalize">
+                      {status}
+                    </span>
+
+                    <span className="ml-2 text-gray-600">
+                      {count}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </section>
         )}
 
