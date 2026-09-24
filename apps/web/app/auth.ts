@@ -102,10 +102,17 @@ export async function authenticatedFetch(
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  return fetch(url, {
+  const response = await fetch(url, {
     ...options,
     headers,
   });
+
+  if (response.status === 401) {
+    logoutUser();
+    window.location.href = "/";
+  }
+
+  return response;
 }
 
 export function logoutUser() {
