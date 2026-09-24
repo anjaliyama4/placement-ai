@@ -235,6 +235,35 @@ export default function Home() {
     }
   }
 
+  async function updateApplicationStatus(applicationId: number, status: string) {
+    try {
+      const response = await authenticatedFetch(
+        `http://127.0.0.1:8001/applications/${applicationId}/status`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ status }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setApplicationMessage(data.detail || "Status update failed.");
+        return;
+      }
+
+      setApplicationMessage("Application status updated successfully.");
+      if (authUser?.student_id) {
+        await loadDashboard(authUser.student_id);
+      }
+    } catch (error) {
+      console.error("Status update failed:", error);
+      setApplicationMessage("Status update failed.");
+    }
+  }
   async function applyToJob(jobId: number) {
     if (!authUser?.student_id) {
       setApplicationMessage("Student profile not found.");
@@ -731,9 +760,22 @@ export default function Home() {
                   {application.company}
                 </p>
 
-                <p className="mt-1 text-sm">
-                  Status: {application.status}
-                </p>
+                <div className="mt-2 flex items-center gap-3">
+  <span className="text-sm">Status:</span>
+  <select
+    value={application.status}
+    onChange={(e) =>
+      updateApplicationStatus(application.id, e.target.value)
+    }
+    className="rounded border px-2 py-1 text-sm"
+  >
+    <option value="applied">Applied</option>
+    <option value="shortlisted">Shortlisted</option>
+    <option value="interview">Interview</option>
+    <option value="selected">Selected</option>
+    <option value="rejected">Rejected</option>
+  </select>
+</div>
               </div>
             ))}
           </div>
@@ -742,6 +784,8 @@ export default function Home() {
     </main>
   );
 }
+
+
 
 
 
