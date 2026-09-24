@@ -76,8 +76,13 @@ export default function Home() {
   const [matches, setMatches] = useState<Record<number, Match>>({});
   const [career, setCareer] =
     useState<CareerIntelligence | null>(null);
-  const [analytics, setAnalytics] =
-    useState<Analytics | null>(null);
+  
+
+  const [analytics, setAnalytics] = useState<Analytics | null>(null);
+
+  const [jobSearch, setJobSearch] = useState("");
+  const [jobLocation, setJobLocation] = useState("");
+  const [jobType, setJobType] = useState("");
 
   const [selectedSkill, setSelectedSkill] = useState("");
   const [proficiency, setProficiency] = useState("Beginner");
@@ -112,7 +117,7 @@ export default function Home() {
         authenticatedFetch(`http://127.0.0.1:8001/applications/student/${studentId}`).then(
           (res) => res.json()
         ),
-        authenticatedFetch("http://127.0.0.1:8001/jobs/").then((res) =>
+        authenticatedFetch(`http://127.0.0.1:8001/jobs/?search=${encodeURIComponent(jobSearch)}&location=${encodeURIComponent(jobLocation)}&job_type=${encodeURIComponent(jobType)}`).then((res) =>
           res.json()
         ),
         authenticatedFetch(`http://127.0.0.1:8001/analytics/student/${studentId}`).then(
@@ -620,6 +625,33 @@ export default function Home() {
             Jobs are ordered by your current skill alignment.
           </p>
 
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            <input
+              value={jobSearch}
+              onChange={(e) => setJobSearch(e.target.value)}
+              placeholder="Search jobs or companies"
+              className="rounded-lg border px-4 py-2"
+            />
+
+            <input
+              value={jobLocation}
+              onChange={(e) => setJobLocation(e.target.value)}
+              placeholder="Location"
+              className="rounded-lg border px-4 py-2"
+            />
+
+            <select
+              value={jobType}
+              onChange={(e) => setJobType(e.target.value)}
+              className="rounded-lg border px-4 py-2"
+            >
+              <option value="">All job types</option>
+              <option value="Internship">Internship</option>
+              <option value="Full-time">Full-time</option>
+              <option value="Part-time">Part-time</option>
+            </select>
+          </div>
+
           <div className="mt-4 grid gap-5 md:grid-cols-2">
             {recommendedJobs.map((job) => {
               const match = matches[job.id];
@@ -784,6 +816,12 @@ export default function Home() {
     </main>
   );
 }
+
+
+
+
+
+
 
 
 
