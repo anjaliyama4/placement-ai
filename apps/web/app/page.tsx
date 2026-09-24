@@ -103,7 +103,7 @@ export default function Home() {
         authenticatedFetch("http://127.0.0.1:8001/students/").then((res) =>
           res.json()
         ),
-        authenticatedFetch(`http://127.0.0.1:8001/skills/student/${authUser?.student_id}`).then((res) =>
+        authenticatedFetch(`http://127.0.0.1:8001/skills/student/${studentId}`).then((res) =>
           res.json()
         ),
         authenticatedFetch("http://127.0.0.1:8001/skills/").then((res) =>
@@ -740,6 +740,7 @@ export default function Home() {
     </main>
   );
 }
+
 
 
 
