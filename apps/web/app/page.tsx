@@ -236,6 +236,11 @@ export default function Home() {
   }
 
   async function applyToJob(jobId: number) {
+    if (!authUser?.student_id) {
+      setApplicationMessage("Student profile not found.");
+      return;
+    }
+
     setApplyingJob(jobId);
     setApplicationMessage("");
 
@@ -248,7 +253,7 @@ export default function Home() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            student_id: authUser?.student_id,
+            student_id: authUser.student_id,
             job_id: jobId,
           }),
         }
@@ -258,11 +263,9 @@ export default function Home() {
 
       if (response.ok) {
         setApplicationMessage(data.message);
-        if (authUser?.student_id) {
         await loadDashboard(authUser.student_id);
-      }
       } else {
-        setApplicationMessage("Application failed.");
+        setApplicationMessage(data.detail || "Application failed.");
       }
     } catch (error) {
       console.error("Application failed:", error);
@@ -271,7 +274,6 @@ export default function Home() {
       setApplyingJob(null);
     }
   }
-
   const availableSkills = allSkills.filter(
     (skill) =>
       !skills.some(
@@ -740,6 +742,7 @@ export default function Home() {
     </main>
   );
 }
+
 
 
 
