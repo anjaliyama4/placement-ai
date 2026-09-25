@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { authenticatedFetch, getAuthUser, logoutUser, type AuthUser } from "./auth";
@@ -778,44 +778,14 @@ export default function Home() {
             Applications
           </h2>
 
-          <div className="mt-3 space-y-3">
-            {applications.map((application) => (
-              <div
-                key={application.id}
-                className="rounded-lg bg-white p-4 shadow"
-              >
-                <h3 className="font-semibold">
-                  {application.job_title}
-                </h3>
-
-                <p className="text-gray-600">
-                  {application.company}
-                </p>
-
-                <div className="mt-2 flex items-center gap-3">
-  <span className="text-sm">Status:</span>
-  <select
-    value={application.status}
-    onChange={(e) =>
-      updateApplicationStatus(application.id, e.target.value)
-    }
-    className="rounded border px-2 py-1 text-sm"
-  >
-    <option value="applied">Applied</option>
-    <option value="shortlisted">Shortlisted</option>
-    <option value="interview">Interview</option>
-    <option value="selected">Selected</option>
-    <option value="rejected">Rejected</option>
-  </select>
-</div>
-              </div>
-            ))}
-          </div>
+          <div className="mt-3 space-y-3">{applications.map((application) => { const stages=["applied","shortlisted","interview","selected"]; const currentIndex=stages.indexOf(application.status); return (<div key={application.id} className="rounded-lg bg-white p-4 shadow"><h3 className="font-semibold">{application.job_title}</h3><p className="text-gray-600">{application.company}</p><div className="mt-4">{application.status==="rejected" ? <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700">Application Rejected</div> : <div className="grid grid-cols-4 gap-2">{stages.map((stage,index)=><div key={stage} className="text-center"><div className={`mx-auto flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${index<=currentIndex ? "bg-black text-white" : "bg-gray-200 text-gray-500"}`}>{index+1}</div><p className="mt-1 text-xs capitalize">{stage}</p></div>)}</div>}</div><div className="mt-3 flex items-center gap-3"><span className="text-sm">Update:</span><select value={application.status} onChange={(e)=>updateApplicationStatus(application.id,e.target.value)} className="rounded border px-2 py-1 text-sm"><option value="applied">Applied</option><option value="shortlisted">Shortlisted</option><option value="interview">Interview</option><option value="selected">Selected</option><option value="rejected">Rejected</option></select></div></div>); })}</div>
         </section>
       </div>
     </main>
   );
 }
+
+
 
 
 
