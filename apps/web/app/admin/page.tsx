@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useState } from "react";
-import { authenticatedFetch, getAuthUser } from "../auth";
+import { authenticatedFetch, getAuthUser, logoutUser } from "../auth";
 
 type Job = {
   id: number;
@@ -117,6 +117,16 @@ export default function AdminDashboard() {
 
   return (
     <main className="min-h-screen bg-gray-50 p-8">
+      <button
+        onClick={() => {
+          logoutUser();
+          window.location.href = "/";
+        }}
+        className="fixed right-6 top-6 z-50 rounded-lg bg-black px-4 py-2 text-sm font-medium text-white shadow hover:opacity-80"
+      >
+        Logout
+      </button>
+
       <div className="mx-auto max-w-6xl">
         <h1 className="text-3xl font-bold">Placement AI Admin</h1>
 

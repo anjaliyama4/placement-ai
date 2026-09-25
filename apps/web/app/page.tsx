@@ -1,9 +1,16 @@
 ﻿"use client";
 
 import { useEffect, useState } from "react";
-import { authenticatedFetch, getAuthUser, logoutUser, type AuthUser } from "./auth";
+import {
+  authenticatedFetch,
+  getAuthUser,
+  logoutUser,
+  type AuthUser,
+} from "./auth";
 import ProfileEditor from "./ProfileEditor";
 import AuthScreen from "./AuthScreen";
+
+const API_URL = "http://127.0.0.1:8001";
 
 type Student = {
   id: number;
@@ -66,19 +73,38 @@ type Analytics = {
   application_status: Record<string, number>;
 };
 
+type InterviewQuestion = {
+  skill: string;
+  type: string;
+  question: string;
+};
+
+type Notification = {
+  id: number;
+  title: string;
+  message: string;
+  is_read: boolean;
+  created_at?: string;
+};
+
 export default function Home() {
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [student, setStudent] = useState<Student | null>(null);
+
   const [skills, setSkills] = useState<Skill[]>([]);
   const [allSkills, setAllSkills] = useState<Skill[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [matches, setMatches] = useState<Record<number, Match>>({});
-  const [career, setCareer] =
-    useState<CareerIntelligence | null>(null);
-  
 
+  const [career, setCareer] = useState<CareerIntelligence | null>(null);
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
+
+  const [interviewQuestions, setInterviewQuestions] = useState<
+    InterviewQuestion[]
+  >([]);
+
+  const [notifications, setNotifications] = useState<Notification[]>([]);
 
   const [jobSearch, setJobSearch] = useState("");
   const [jobLocation, setJobLocation] = useState("");
@@ -91,123 +117,261 @@ export default function Home() {
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [uploadingResume, setUploadingResume] = useState(false);
   const [resumeMessage, setResumeMessage] = useState("");
+  const [resumeScore, setResumeScore] = useState<any>(null);
 
   const [applyingJob, setApplyingJob] = useState<number | null>(null);
   const [applicationMessage, setApplicationMessage] = useState("");
 
+  const [loadingDashboard, setLoadingDashboard] = useState(false);
+
+  const hour = new Date().getHours();
+
+  const greeting =
+    hour >= 5 && hour < 12
+      ? "Good morning"
+      : hour >= 12 && hour < 17
+        ? "Good afternoon"
+        : "Good evening";
+
   async function loadDashboard(studentId: number) {
+    setLoadingDashboard(true);
+
     try {
       const [
-        studentData,
-        skillData,
-        allSkillData,
-        applicationData,
-        jobData,
-        analyticsData,
+        studentResponse,
+        skillResponse,
+        allSkillResponse,
+        applicationResponse,
+        jobResponse,
+        analyticsResponse,
+        resumeScoreResponse,
+        interviewResponse,
+        notificationResponse,
       ] = await Promise.all([
-        authenticatedFetch("http://127.0.0.1:8001/students/").then((res) =>
-          res.json()
+        authenticatedFetch(`${API_URL}/students/`),
+        authenticatedFetch(`${API_URL}/skills/student/${studentId}`),
+        authenticatedFetch(`${API_URL}/skills/`),
+        authenticatedFetch(
+          `${API_URL}/applications/student/${studentId}`
         ),
-        authenticatedFetch(`http://127.0.0.1:8001/skills/student/${studentId}`).then((res) =>
-          res.json()
+        authenticatedFetch(
+          `${API_URL}/jobs/?search=${encodeURIComponent(
+            jobSearch
+          )}&location=${encodeURIComponent(
+            jobLocation
+          )}&job_type=${encodeURIComponent(jobType)}`
         ),
-        authenticatedFetch("http://127.0.0.1:8001/skills/").then((res) =>
-          res.json()
+        authenticatedFetch(
+          `${API_URL}/analytics/student/${studentId}`
         ),
-        authenticatedFetch(`http://127.0.0.1:8001/applications/student/${studentId}`).then(
-          (res) => res.json()
+        authenticatedFetch(
+          `${API_URL}/resumes/student/${studentId}/score`
         ),
-        authenticatedFetch(`http://127.0.0.1:8001/jobs/?search=${encodeURIComponent(jobSearch)}&location=${encodeURIComponent(jobLocation)}&job_type=${encodeURIComponent(jobType)}`).then((res) =>
-          res.json()
+        authenticatedFetch(
+          `${API_URL}/interview/student/${studentId}`
         ),
-        authenticatedFetch(`http://127.0.0.1:8001/analytics/student/${studentId}`).then(
-          (res) => res.json()
-        ),
+        authenticatedFetch(`${API_URL}/notifications/`),
       ]);
 
-      setStudent(studentData.students.find((item: Student) => item.id === studentId) ?? null);
-      setSkills(skillData.skills ?? []);
-      setAllSkills(allSkillData.skills ?? []);
-      setApplications(applicationData.applications ?? []);
-      setJobs(jobData.jobs ?? [])
+      const studentData = await studentResponse.json();
+      const skillData = await skillResponse.json();
+      const allSkillData = await allSkillResponse.json();
+      const applicationData = await applicationResponse.json();
+      const jobData = await jobResponse.json();
+      const analyticsData = await analyticsResponse.json();
+      const resumeScoreData = await resumeScoreResponse.json();
+      const interviewData = await interviewResponse.json();
+      const notificationData = await notificationResponse.json();
 
-      if (!analyticsData.detail) {
+      if (studentResponse.ok) {
+        setStudent(
+          studentData.students?.find(
+            (item: Student) => item.id === studentId
+          ) ?? null
+        );
+      }
+
+      if (skillResponse.ok) {
+        setSkills(skillData.skills ?? []);
+      }
+
+      if (allSkillResponse.ok) {
+        setAllSkills(allSkillData.skills ?? []);
+      }
+
+      if (applicationResponse.ok) {
+        setApplications(applicationData.applications ?? []);
+      }
+
+      if (jobResponse.ok) {
+        setJobs(jobData.jobs ?? []);
+      }
+
+      if (analyticsResponse.ok && !analyticsData.detail) {
         setAnalytics(analyticsData);
       }
 
-      const careerResponse = await authenticatedFetch(
-        `http://127.0.0.1:8001/career/student/${studentId}`
-      );
-
-      if (careerResponse.ok) {
-        const careerData = await careerResponse.json();
-        setCareer(careerData);
+      if (resumeScoreResponse.ok && !resumeScoreData.detail) {
+        setResumeScore(resumeScoreData);
+      } else {
+        setResumeScore(null);
       }
 
-      const matchResults = await Promise.all(
-        jobData.jobs.map(async (job: Job) => {
-          const response = await authenticatedFetch(
-            `http://127.0.0.1:8001/matching/student/${studentId}/job/${job.id}`
-          );
+      if (
+        interviewResponse.ok &&
+        !interviewData.detail &&
+        !interviewData.error
+      ) {
+        setInterviewQuestions(interviewData.questions ?? []);
+      } else {
+        setInterviewQuestions([]);
+      }
 
-          return [job.id, await response.json()] as const;
+      if (
+        notificationResponse.ok &&
+        !notificationData.detail
+      ) {
+        setNotifications(
+          notificationData.notifications ?? []
+        );
+      } else {
+        setNotifications([]);
+      }
+
+      try {
+        const careerResponse = await authenticatedFetch(
+          `${API_URL}/career/student/${studentId}`
+        );
+
+        if (careerResponse.ok) {
+          const careerData = await careerResponse.json();
+          setCareer(careerData);
+        } else {
+          setCareer(null);
+        }
+      } catch (error) {
+        console.error("Career loading failed:", error);
+        setCareer(null);
+      }
+
+      const currentJobs = jobData.jobs ?? [];
+
+      const matchResults = await Promise.all(
+        currentJobs.map(async (job: Job) => {
+          try {
+            const response = await authenticatedFetch(
+              `${API_URL}/matching/student/${studentId}/job/${job.id}`
+            );
+
+            if (!response.ok) {
+              return [
+                job.id,
+                {
+                  match_percentage: 0,
+                  matched_skills: [],
+                  missing_skills: [],
+                },
+              ] as const;
+            }
+
+            const data = await response.json();
+
+            return [job.id, data] as const;
+          } catch {
+            return [
+              job.id,
+              {
+                match_percentage: 0,
+                matched_skills: [],
+                missing_skills: [],
+              },
+            ] as const;
+          }
         })
       );
 
       setMatches(Object.fromEntries(matchResults));
     } catch (error) {
       console.error("Dashboard loading failed:", error);
+    } finally {
+      setLoadingDashboard(false);
     }
   }
 
   useEffect(() => {
     const user = getAuthUser();
+
     setAuthUser(user);
+
+    if (user?.role === "admin") {
+      window.location.href = "/admin";
+      return;
+    }
+
+    if (user?.role === "recruiter") {
+      window.location.href = "/recruiter";
+      return;
+    }
+
     if (user?.student_id) {
       loadDashboard(user.student_id);
     }
   }, []);
 
   async function addSkill() {
-    if (!selectedSkill) return;
+    if (!selectedSkill || !authUser?.student_id) {
+      return;
+    }
 
     setAddingSkill(true);
 
     try {
-      await authenticatedFetch(`http://127.0.0.1:8001/skills/student/${authUser?.student_id}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          skill_id: Number(selectedSkill),
-          proficiency,
-        }),
-      });
+      const response = await authenticatedFetch(
+        `${API_URL}/skills/student/${authUser.student_id}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            skill_id: Number(selectedSkill),
+            proficiency,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        console.error("Skill add failed:", data);
+        return;
+      }
 
       setSelectedSkill("");
       setProficiency("Beginner");
 
-      if (authUser?.student_id) {
-        await loadDashboard(authUser.student_id);
-      }
+      await loadDashboard(authUser.student_id);
+    } catch (error) {
+      console.error("Skill add failed:", error);
     } finally {
       setAddingSkill(false);
     }
   }
 
   async function uploadResume() {
-    if (!resumeFile) return;
+    if (!resumeFile || !authUser?.student_id) {
+      return;
+    }
 
     setUploadingResume(true);
     setResumeMessage("");
 
     try {
       const formData = new FormData();
+
       formData.append("file", resumeFile);
 
       const response = await authenticatedFetch(
-        `http://127.0.0.1:8001/resumes/student/${authUser?.student_id}`,
+        `${API_URL}/resumes/student/${authUser.student_id}`,
         {
           method: "POST",
           body: formData,
@@ -226,11 +390,12 @@ export default function Home() {
         );
 
         setResumeFile(null);
-        if (authUser?.student_id) {
+
         await loadDashboard(authUser.student_id);
-      }
       } else {
-        setResumeMessage(data.detail || "Resume upload failed.");
+        setResumeMessage(
+          data.detail || "Resume upload failed."
+        );
       }
     } catch (error) {
       console.error("Resume upload failed:", error);
@@ -240,35 +405,6 @@ export default function Home() {
     }
   }
 
-  async function updateApplicationStatus(applicationId: number, status: string) {
-    try {
-      const response = await authenticatedFetch(
-        `http://127.0.0.1:8001/applications/${applicationId}/status`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ status }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setApplicationMessage(data.detail || "Status update failed.");
-        return;
-      }
-
-      setApplicationMessage("Application status updated successfully.");
-      if (authUser?.student_id) {
-        await loadDashboard(authUser.student_id);
-      }
-    } catch (error) {
-      console.error("Status update failed:", error);
-      setApplicationMessage("Status update failed.");
-    }
-  }
   async function applyToJob(jobId: number) {
     if (!authUser?.student_id) {
       setApplicationMessage("Student profile not found.");
@@ -280,7 +416,7 @@ export default function Home() {
 
     try {
       const response = await authenticatedFetch(
-        "http://127.0.0.1:8001/applications/",
+        `${API_URL}/applications/`,
         {
           method: "POST",
           headers: {
@@ -296,10 +432,15 @@ export default function Home() {
       const data = await response.json();
 
       if (response.ok) {
-        setApplicationMessage(data.message);
+        setApplicationMessage(
+          data.message || "Application submitted successfully."
+        );
+
         await loadDashboard(authUser.student_id);
       } else {
-        setApplicationMessage(data.detail || "Application failed.");
+        setApplicationMessage(
+          data.detail || "Application failed."
+        );
       }
     } catch (error) {
       console.error("Application failed:", error);
@@ -308,6 +449,12 @@ export default function Home() {
       setApplyingJob(null);
     }
   }
+
+  function handleLogout() {
+    logoutUser();
+    window.location.href = "/";
+  }
+
   const availableSkills = allSkills.filter(
     (skill) =>
       !skills.some(
@@ -326,17 +473,24 @@ export default function Home() {
       ? Math.round(
           jobs.reduce(
             (total, job) =>
-              total + (matches[job.id]?.match_percentage ?? 0),
+              total +
+              (matches[job.id]?.match_percentage ?? 0),
             0
           ) / jobs.length
         )
       : 0;
+
+  const studentName =
+    student?.full_name ||
+    authUser?.full_name ||
+    "Student";
 
   if (!authUser) {
     return (
       <AuthScreen
         onAuthenticated={(user) => {
           setAuthUser(user);
+
           if (user.student_id) {
             loadDashboard(user.student_id);
           }
@@ -346,75 +500,182 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 p-8">
-      <div className="mx-auto max-w-6xl">
-        <h1 className="text-3xl font-bold">
-          Placement AI Dashboard
-        </h1>
+    <main className="min-h-screen bg-slate-50 text-slate-900">
+      <div className="flex min-h-screen">
+        {/* SIDEBAR */}
+        <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-slate-200 bg-white lg:block">
+          <div className="flex h-full flex-col p-5">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">
+                Placement AI
+              </h1>
 
-        {student && (
-          <section className="mt-6 rounded-xl bg-white p-6 shadow">
-            <h2 className="text-2xl font-semibold">
-              {student.full_name}
-            </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Student Portal
+              </p>
+            </div>
 
-            <p className="mt-2 text-gray-600">
-              {student.college} · {student.degree}
-            </p>
+            <nav className="mt-8 space-y-1">
+              <a
+                href="#dashboard"
+                className="block rounded-lg bg-slate-100 px-4 py-3 text-sm font-semibold"
+              >
+                Dashboard
+              </a>
 
-            <p className="mt-1 text-gray-600">
-              Graduation: {student.graduation_year} · CGPA:{" "}
-              {student.cgpa}
-            </p>
-          </section>
-        )}
+              <a
+                href="#resume"
+                className="block rounded-lg px-4 py-3 text-sm text-slate-600 hover:bg-slate-100"
+              >
+                Resume
+              </a>
 
-        {authUser?.student_id && (
-          <ProfileEditor
-            studentId={authUser.student_id}
-            onUpdated={() => loadDashboard(authUser.student_id!)}
-          />
-        )}
+              <a
+                href="#jobs"
+                className="block rounded-lg px-4 py-3 text-sm text-slate-600 hover:bg-slate-100"
+              >
+                Jobs
+              </a>
 
-        {analytics && (
-          <section className="mt-6">
-            <h2 className="text-xl font-semibold">
-              Placement Analytics
-            </h2>
+              <a
+                href="#applications"
+                className="block rounded-lg px-4 py-3 text-sm text-slate-600 hover:bg-slate-100"
+              >
+                Applications
+              </a>
 
-            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="rounded-xl bg-white p-5 shadow">
-                <p className="text-sm text-gray-500">
+              <a
+                href="#skills"
+                className="block rounded-lg px-4 py-3 text-sm text-slate-600 hover:bg-slate-100"
+              >
+                Skills
+              </a>
+
+              <a
+                href="#interviews"
+                className="block rounded-lg px-4 py-3 text-sm text-slate-600 hover:bg-slate-100"
+              >
+                Interviews
+              </a>
+
+              <a
+                href="#career"
+                className="block rounded-lg px-4 py-3 text-sm text-slate-600 hover:bg-slate-100"
+              >
+                Career Intelligence
+              </a>
+
+              <a
+                href="#notifications"
+                className="block rounded-lg px-4 py-3 text-sm text-slate-600 hover:bg-slate-100"
+              >
+                Notifications
+              </a>
+            </nav>
+
+            <div className="mt-auto border-t border-slate-200 pt-5">
+              <p className="font-semibold">{studentName}</p>
+
+              <p className="mt-1 break-all text-xs text-slate-500">
+                {authUser.email}
+              </p>
+
+              <button
+                onClick={handleLogout}
+                className="mt-4 w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-700"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </aside>
+
+        {/* MAIN */}
+        <div className="min-w-0 flex-1">
+          <div className="mx-auto max-w-7xl px-5 py-6 sm:px-8 lg:px-10">
+            {/* MOBILE HEADER */}
+            <div className="mb-6 flex items-center justify-between lg:hidden">
+              <div>
+                <h1 className="text-xl font-bold">
+                  Placement AI
+                </h1>
+
+                <p className="text-xs text-slate-500">
+                  Student Portal
+                </p>
+              </div>
+
+              <button
+                onClick={handleLogout}
+                className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+              >
+                Logout
+              </button>
+            </div>
+
+            {/* DASHBOARD HEADER */}
+            <section id="dashboard" className="scroll-mt-6">
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <p className="text-sm font-medium text-slate-500">
+                  Student Dashboard
+                </p>
+
+                <div className="mt-2 flex flex-col justify-between gap-4 md:flex-row md:items-end">
+                  <div>
+                    <h2 className="text-3xl font-bold tracking-tight">
+                      {greeting}, {studentName}
+                    </h2>
+
+                    <p className="mt-2 text-slate-600">
+                      Track your placement progress,
+                      applications and career readiness.
+                    </p>
+                  </div>
+
+                  {loadingDashboard && (
+                    <span className="text-sm text-slate-500">
+                      Updating...
+                    </span>
+                  )}
+                </div>
+              </div>
+            </section>
+
+            {/* STATISTICS */}
+            <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <p className="text-sm text-slate-500">
                   Available Jobs
                 </p>
 
                 <p className="mt-2 text-3xl font-bold">
-                  {analytics.total_jobs}
+                  {analytics?.total_jobs ?? jobs.length}
                 </p>
               </div>
 
-              <div className="rounded-xl bg-white p-5 shadow">
-                <p className="text-sm text-gray-500">
+              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <p className="text-sm text-slate-500">
                   Applications
                 </p>
 
                 <p className="mt-2 text-3xl font-bold">
-                  {analytics.applications_count}
+                  {analytics?.applications_count ??
+                    applications.length}
                 </p>
               </div>
 
-              <div className="rounded-xl bg-white p-5 shadow">
-                <p className="text-sm text-gray-500">
+              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <p className="text-sm text-slate-500">
                   Skills
                 </p>
 
                 <p className="mt-2 text-3xl font-bold">
-                  {analytics.skills_count}
+                  {analytics?.skills_count ?? skills.length}
                 </p>
               </div>
 
-              <div className="rounded-xl bg-white p-5 shadow">
-                <p className="text-sm text-gray-500">
+              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <p className="text-sm text-slate-500">
                   Average Job Match
                 </p>
 
@@ -422,389 +683,810 @@ export default function Home() {
                   {averageMatch}%
                 </p>
               </div>
-            </div>
+            </section>
 
-            <div className="mt-4 rounded-xl bg-white p-5 shadow">
-              <h3 className="font-semibold">
-                Application Status
-              </h3>
+            {/* RESUME */}
+            <section
+              id="resume"
+              className="mt-8 scroll-mt-6"
+            >
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="flex flex-col justify-between gap-5 md:flex-row md:items-center">
+                  <div>
+                    <p className="text-sm font-medium text-slate-500">
+                      Resume
+                    </p>
 
-              <div className="mt-3 flex flex-wrap gap-3">
-                {Object.entries(
-                  analytics.application_status
-                ).map(([status, count]) => (
-                  <div
-                    key={status}
-                    className="rounded-lg bg-gray-100 px-4 py-3"
-                  >
-                    <span className="font-medium capitalize">
-                      {status}
-                    </span>
+                    <h2 className="mt-1 text-2xl font-bold">
+                      Resume Score
+                    </h2>
 
-                    <span className="ml-2 text-gray-600">
-                      {count}
+                    <p className="mt-2 text-slate-600">
+                      Improve your resume based on the
+                      latest analysis.
+                    </p>
+                  </div>
+
+                  <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full bg-slate-100">
+                    <span className="text-2xl font-bold">
+                      {resumeScore?.score != null
+                        ? `${resumeScore.score}`
+                        : "--"}
                     </span>
                   </div>
-                ))}
-              </div>
-            </div>
-          </section>
-        )}
+                </div>
 
-        <section className="mt-6 rounded-xl bg-white p-6 shadow">
-          <h2 className="text-xl font-semibold">
-            Resume Intelligence
-          </h2>
+                {resumeScore ? (
+                  <>
+                    <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                      <div className="rounded-lg bg-slate-50 p-4">
+                        <p className="text-xs text-slate-500">
+                          Skills
+                        </p>
 
-          <p className="mt-2 text-gray-600">
-            Upload your resume to automatically detect and add
-            technical skills to your profile.
-          </p>
+                        <p className="mt-1 font-semibold">
+                          {resumeScore.breakdown?.skills ??
+                            0}
+                          /40
+                        </p>
+                      </div>
 
-          <div className="mt-5 flex flex-wrap items-center gap-3">
-            <input
-              type="file"
-              accept=".pdf,.txt"
-              onChange={(e) =>
-                setResumeFile(e.target.files?.[0] ?? null)
-              }
-              className="rounded-lg border bg-white px-3 py-2"
-            />
+                      <div className="rounded-lg bg-slate-50 p-4">
+                        <p className="text-xs text-slate-500">
+                          Profile
+                        </p>
 
-            <button
-              onClick={uploadResume}
-              disabled={!resumeFile || uploadingResume}
-              className="rounded-lg bg-black px-5 py-2 text-white disabled:opacity-50"
-            >
-              {uploadingResume
-                ? "Analyzing..."
-                : "Upload Resume"}
-            </button>
-          </div>
+                        <p className="mt-1 font-semibold">
+                          {resumeScore.breakdown?.profile ??
+                            0}
+                          /20
+                        </p>
+                      </div>
 
-          {resumeMessage && (
-            <p className="mt-4 rounded-lg bg-gray-100 p-3 text-gray-700">
-              {resumeMessage}
-            </p>
-          )}
-        </section>
+                      <div className="rounded-lg bg-slate-50 p-4">
+                        <p className="text-xs text-slate-500">
+                          Content
+                        </p>
 
-        <section className="mt-6 rounded-xl bg-white p-6 shadow">
-          <h2 className="text-xl font-semibold">
-            Skills
-          </h2>
+                        <p className="mt-1 font-semibold">
+                          {resumeScore.breakdown?.content ??
+                            0}
+                          /40
+                        </p>
+                      </div>
+                    </div>
 
-          <div className="mt-3 flex flex-wrap gap-3">
-            {skills.map((skill) => (
-              <div
-                key={skill.id}
-                className="rounded-lg bg-gray-100 px-4 py-3"
-              >
-                <strong>{skill.name}</strong>
+                    {resumeScore.recommendations?.length >
+                      0 && (
+                      <div className="mt-5">
+                        <h3 className="font-semibold">
+                          Recommendations
+                        </h3>
 
-                {skill.proficiency && (
-                  <span className="ml-2 text-gray-500">
-                    {skill.proficiency}
-                  </span>
+                        <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-600">
+                          {resumeScore.recommendations.map(
+                            (item: string) => (
+                              <li key={item}>{item}</li>
+                            )
+                          )}
+                        </ul>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <p className="mt-5 rounded-lg bg-slate-50 p-4 text-sm text-slate-600">
+                    Upload a resume to calculate your
+                    score.
+                  </p>
                 )}
-              </div>
-            ))}
-          </div>
 
-          <div className="mt-6 flex flex-wrap gap-3">
-            <select
-              value={selectedSkill}
-              onChange={(e) =>
-                setSelectedSkill(e.target.value)
-              }
-              className="rounded-lg border px-4 py-2"
-            >
-              <option value="">Select skill</option>
-
-              {availableSkills.map((skill) => (
-                <option key={skill.id} value={skill.id}>
-                  {skill.name}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={proficiency}
-              onChange={(e) =>
-                setProficiency(e.target.value)
-              }
-              className="rounded-lg border px-4 py-2"
-            >
-              <option>Beginner</option>
-              <option>Intermediate</option>
-              <option>Advanced</option>
-            </select>
-
-            <button
-              onClick={addSkill}
-              disabled={!selectedSkill || addingSkill}
-              className="rounded-lg bg-black px-5 py-2 text-white disabled:opacity-50"
-            >
-              {addingSkill ? "Adding..." : "Add Skill"}
-            </button>
-          </div>
-        </section>
-
-        {career && (
-          <section className="mt-8 rounded-xl bg-white p-6 shadow">
-            <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-              <div>
-                <h2 className="text-xl font-semibold">
-                  AI Career Intelligence
-                </h2>
-
-                <p className="mt-2 text-gray-600">
-                  Personalized career guidance based on your
-                  current profile and skills.
-                </p>
-              </div>
-
-              <div className="rounded-xl bg-gray-100 px-8 py-5 text-center">
-                <p className="text-sm font-medium text-gray-500">
-                  Career Readiness
-                </p>
-
-                <p className="mt-1 text-4xl font-bold">
-                  {career.readiness_score}%
-                </p>
-
-                <p className="mt-1 font-semibold">
-                  {career.readiness_level}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-5 h-3 overflow-hidden rounded-full bg-gray-200">
-              <div
-                className="h-full rounded-full bg-black transition-all"
-                style={{
-                  width: `${career.readiness_score}%`,
-                }}
-              />
-            </div>
-
-            <div className="mt-5 grid gap-4 md:grid-cols-2">
-              <div className="rounded-lg bg-gray-50 p-4">
-                <h3 className="font-semibold">
-                  Suggested Career Paths
-                </h3>
-
-                <ul className="mt-3 list-disc pl-5">
-                  {career.career_paths.map((path) => (
-                    <li key={path}>{path}</li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="rounded-lg bg-gray-50 p-4">
-                <h3 className="font-semibold">
-                  Recommended Next Steps
-                </h3>
-
-                <ul className="mt-3 list-disc pl-5">
-                  {career.recommendations.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </section>
-        )}
-
-        <section className="mt-8">
-          <h2 className="text-xl font-semibold">
-            Recommended Jobs
-          </h2>
-
-          <p className="mt-2 text-gray-600">
-            Jobs are ordered by your current skill alignment.
-          </p>
-
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
-            <input
-              value={jobSearch}
-              onChange={(e) => setJobSearch(e.target.value)}
-              placeholder="Search jobs or companies"
-              className="rounded-lg border px-4 py-2"
-            />
-
-            <input
-              value={jobLocation}
-              onChange={(e) => setJobLocation(e.target.value)}
-              placeholder="Location"
-              className="rounded-lg border px-4 py-2"
-            />
-
-            <select
-              value={jobType}
-              onChange={(e) => setJobType(e.target.value)}
-              className="rounded-lg border px-4 py-2"
-            >
-              <option value="">All job types</option>
-              <option value="Internship">Internship</option>
-              <option value="Full-time">Full-time</option>
-              <option value="Part-time">Part-time</option>
-            </select>
-          </div>
-
-          <div className="mt-4 grid gap-5 md:grid-cols-2">
-            {recommendedJobs.map((job) => {
-              const match = matches[job.id];
-
-              if (!match) {
-                return null;
-              }
-
-              const alreadyApplied = applications.some(
-                (application) => application.job_id === job.id
-              );
-
-              return (
-                <div
-                  key={job.id}
-                  className="rounded-xl bg-white p-6 shadow"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <h3 className="text-xl font-semibold">
-                        {job.title}
-                      </h3>
-
-                      <p className="mt-1 text-gray-600">
-                        {job.company}
-                      </p>
-                    </div>
-
-                    <div className="rounded-lg bg-gray-100 px-3 py-2 text-center">
-                      <p className="text-xl font-bold">
-                        {match.match_percentage}%
-                      </p>
-
-                      <p className="text-xs text-gray-500">
-                        Match
-                      </p>
-                    </div>
-                  </div>
-
-                  <p className="mt-3 text-sm text-gray-500">
-                    {job.location} · {job.job_type}
+                <div className="mt-6 border-t border-slate-200 pt-5">
+                  <p className="mb-3 text-sm font-semibold">
+                    Resume Intelligence
                   </p>
 
-                  {job.description && (
-                    <p className="mt-3 text-gray-700">
-                      {job.description}
+                  <p className="mb-4 text-sm text-slate-600">
+                    Upload your latest PDF or TXT resume
+                    to analyze skills and improve your
+                    profile.
+                  </p>
+
+                  <div className="flex flex-col gap-3 sm:flex-row">
+                    <input
+                      type="file"
+                      accept=".pdf,.txt"
+                      onChange={(event) =>
+                        setResumeFile(
+                          event.target.files?.[0] ?? null
+                        )
+                      }
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                    />
+
+                    <button
+                      onClick={uploadResume}
+                      disabled={
+                        !resumeFile || uploadingResume
+                      }
+                      className="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {uploadingResume
+                        ? "Analyzing..."
+                        : "Upload Resume"}
+                    </button>
+                  </div>
+
+                  {resumeMessage && (
+                    <p className="mt-4 rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
+                      {resumeMessage}
                     </p>
                   )}
+                </div>
+              </div>
+            </section>
 
-                  <div className="mt-5 border-t pt-5">
-                    <h4 className="font-semibold">
-                      Your Skill Alignment
-                    </h4>
+            {/* INTERVIEW */}
+            <section
+              id="interviews"
+              className="mt-8 scroll-mt-6"
+            >
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <p className="text-sm font-medium text-slate-500">
+                  Interview Preparation
+                </p>
 
-                    <p className="mt-2 text-sm text-gray-700">
-                      <strong>Matched:</strong>{" "}
-                      {match.matched_skills.length > 0
-                        ? match.matched_skills.join(", ")
-                        : "None"}
+                <h2 className="mt-1 text-2xl font-bold">
+                  Interview Questions
+                </h2>
+
+                <p className="mt-2 text-slate-600">
+                  Practice questions based on your current
+                  skills.
+                </p>
+
+                {interviewQuestions.length > 0 ? (
+                  <div className="mt-5 space-y-3">
+                    {interviewQuestions.map(
+                      (item, index) => (
+                        <div
+                          key={`${item.skill}-${index}`}
+                          className="rounded-xl border border-slate-200 bg-slate-50 p-4"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <h3 className="font-semibold">
+                              {index + 1}. {item.skill}
+                            </h3>
+
+                            <span className="rounded-full bg-white px-3 py-1 text-xs font-medium capitalize text-slate-500">
+                              {item.type}
+                            </span>
+                          </div>
+
+                          <p className="mt-3 text-sm text-slate-700">
+                            {item.question}
+                          </p>
+                        </div>
+                      )
+                    )}
+                  </div>
+                ) : (
+                  <p className="mt-5 rounded-lg bg-slate-50 p-4 text-sm text-slate-600">
+                    No interview questions available
+                    yet.
+                  </p>
+                )}
+              </div>
+            </section>
+
+            {/* JOBS */}
+            <section id="jobs" className="mt-8 scroll-mt-6">
+              <div className="mb-4">
+                <p className="text-sm font-medium text-slate-500">
+                  Opportunities
+                </p>
+
+                <h2 className="mt-1 text-2xl font-bold">
+                  Recommended Jobs
+                </h2>
+
+                <p className="mt-2 text-slate-600">
+                  Jobs ordered by your current skill
+                  alignment.
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="grid gap-3 md:grid-cols-4">
+                  <input
+                    value={jobSearch}
+                    onChange={(event) =>
+                      setJobSearch(event.target.value)
+                    }
+                    placeholder="Search jobs or companies"
+                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm outline-none focus:border-slate-500"
+                  />
+
+                  <input
+                    value={jobLocation}
+                    onChange={(event) =>
+                      setJobLocation(event.target.value)
+                    }
+                    placeholder="Location"
+                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm outline-none focus:border-slate-500"
+                  />
+
+                  <select
+                    value={jobType}
+                    onChange={(event) =>
+                      setJobType(event.target.value)
+                    }
+                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm"
+                  >
+                    <option value="">
+                      All job types
+                    </option>
+                    <option value="Internship">
+                      Internship
+                    </option>
+                    <option value="Full-time">
+                      Full-time
+                    </option>
+                    <option value="Part-time">
+                      Part-time
+                    </option>
+                  </select>
+
+                  <button
+                    onClick={() => {
+                      if (authUser.student_id) {
+                        loadDashboard(
+                          authUser.student_id
+                        );
+                      }
+                    }}
+                    className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+                  >
+                    Search Jobs
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-4">
+                {recommendedJobs.length === 0 ? (
+                  <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+                    <p className="text-3xl font-bold">
+                      0 opportunities
                     </p>
 
-                    <p className="mt-2 text-sm text-gray-700">
-                      <strong>Missing:</strong>{" "}
-                      {match.missing_skills.length > 0
-                        ? match.missing_skills.join(", ")
-                        : "None"}
+                    <p className="mt-2 text-sm text-slate-500">
+                      No jobs match your current search.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid gap-5 md:grid-cols-2">
+                    {recommendedJobs.map((job) => {
+                      const match = matches[job.id];
+
+                      if (!match) {
+                        return null;
+                      }
+
+                      const alreadyApplied =
+                        applications.some(
+                          (application) =>
+                            application.job_id === job.id
+                        );
+
+                      return (
+                        <div
+                          key={job.id}
+                          className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            <div>
+                              <h3 className="text-xl font-bold">
+                                {job.title}
+                              </h3>
+
+                              <p className="mt-1 text-slate-600">
+                                {job.company}
+                              </p>
+                            </div>
+
+                            <div className="rounded-xl bg-slate-100 px-4 py-3 text-center">
+                              <p className="text-xl font-bold">
+                                {match.match_percentage}%
+                              </p>
+
+                              <p className="text-xs text-slate-500">
+                                Match
+                              </p>
+                            </div>
+                          </div>
+
+                          <p className="mt-4 text-sm text-slate-500">
+                            {job.location || "Location not specified"}
+                            {" · "}
+                            {job.job_type ||
+                              "Job type not specified"}
+                          </p>
+
+                          {job.description && (
+                            <p className="mt-4 text-sm leading-6 text-slate-700">
+                              {job.description}
+                            </p>
+                          )}
+
+                          <div className="mt-5 border-t border-slate-200 pt-5">
+                            <h4 className="font-semibold">
+                              Your Skill Alignment
+                            </h4>
+
+                            <p className="mt-2 text-sm text-slate-600">
+                              <strong>Matched:</strong>{" "}
+                              {match.matched_skills
+                                ?.length > 0
+                                ? match.matched_skills.join(
+                                    ", "
+                                  )
+                                : "None"}
+                            </p>
+
+                            <p className="mt-2 text-sm text-slate-600">
+                              <strong>Missing:</strong>{" "}
+                              {match.missing_skills
+                                ?.length > 0
+                                ? match.missing_skills.join(
+                                    ", "
+                                  )
+                                : "None"}
+                            </p>
+                          </div>
+
+                          {match.missing_skills?.length >
+                          0 ? (
+                            <div className="mt-4 rounded-xl bg-slate-50 p-4">
+                              <h4 className="font-semibold">
+                                Skill Gap Analysis
+                              </h4>
+
+                              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-600">
+                                {match.missing_skills.map(
+                                  (skill) => (
+                                    <li key={skill}>
+                                      Learn{" "}
+                                      <strong>
+                                        {skill}
+                                      </strong>
+                                    </li>
+                                  )
+                                )}
+                              </ul>
+                            </div>
+                          ) : (
+                            <div className="mt-4 rounded-xl bg-slate-50 p-4 text-sm font-medium">
+                              No current skill gaps
+                              detected.
+                            </div>
+                          )}
+
+                          <button
+                            onClick={() =>
+                              applyToJob(job.id)
+                            }
+                            disabled={
+                              applyingJob === job.id ||
+                              alreadyApplied
+                            }
+                            className="mt-5 w-full rounded-lg bg-slate-900 px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {applyingJob === job.id
+                              ? "Applying..."
+                              : alreadyApplied
+                                ? "Applied"
+                                : "Apply Now"}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {applicationMessage && (
+              <div className="mt-5 rounded-lg bg-slate-100 p-4 text-sm">
+                {applicationMessage}
+              </div>
+            )}
+
+            {/* APPLICATIONS */}
+            <section
+              id="applications"
+              className="mt-8 scroll-mt-6"
+            >
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <p className="text-sm font-medium text-slate-500">
+                  Placement Activity
+                </p>
+
+                <h2 className="mt-1 text-2xl font-bold">
+                  Applications
+                </h2>
+
+                <p className="mt-2 text-slate-600">
+                  Track the progress of your submitted
+                  applications.
+                </p>
+
+                {applications.length === 0 ? (
+                  <p className="mt-5 rounded-lg bg-slate-50 p-4 text-sm text-slate-600">
+                    You have not submitted any
+                    applications yet.
+                  </p>
+                ) : (
+                  <div className="mt-5 space-y-4">
+                    {applications.map((application) => {
+                      const stages = [
+                        "applied",
+                        "shortlisted",
+                        "interview",
+                        "selected",
+                      ];
+
+                      const currentIndex =
+                        stages.indexOf(
+                          application.status
+                        );
+
+                      return (
+                        <div
+                          key={application.id}
+                          className="rounded-xl border border-slate-200 p-5"
+                        >
+                          <h3 className="font-semibold">
+                            {application.job_title}
+                          </h3>
+
+                          <p className="text-sm text-slate-500">
+                            {application.company}
+                          </p>
+
+                          <div className="mt-5">
+                            {application.status ===
+                            "rejected" ? (
+                              <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700">
+                                Application Rejected
+                              </div>
+                            ) : (
+                              <div className="grid grid-cols-4 gap-2">
+                                {stages.map(
+                                  (
+                                    stage,
+                                    index
+                                  ) => (
+                                    <div
+                                      key={stage}
+                                      className="text-center"
+                                    >
+                                      <div
+                                        className={`mx-auto flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${
+                                          index <=
+                                          currentIndex
+                                            ? "bg-slate-900 text-white"
+                                            : "bg-slate-200 text-slate-500"
+                                        }`}
+                                      >
+                                        {index + 1}
+                                      </div>
+
+                                      <p className="mt-1 text-xs capitalize text-slate-600">
+                                        {stage}
+                                      </p>
+                                    </div>
+                                  )
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* SKILLS */}
+            <section
+              id="skills"
+              className="mt-8 scroll-mt-6"
+            >
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <p className="text-sm font-medium text-slate-500">
+                  Profile Development
+                </p>
+
+                <h2 className="mt-1 text-2xl font-bold">
+                  Skills
+                </h2>
+
+                <p className="mt-2 text-slate-600">
+                  Manage the technical skills used for job
+                  matching.
+                </p>
+
+                <div className="mt-5 flex flex-wrap gap-2">
+                  {skills.length === 0 ? (
+                    <p className="text-sm text-slate-500">
+                      No skills added yet.
+                    </p>
+                  ) : (
+                    skills.map((skill) => (
+                      <div
+                        key={skill.id}
+                        className="rounded-lg bg-slate-100 px-4 py-2 text-sm"
+                      >
+                        <strong>{skill.name}</strong>
+
+                        {skill.proficiency && (
+                          <span className="ml-2 text-slate-500">
+                            {skill.proficiency}
+                          </span>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <div className="mt-6 flex flex-col gap-3 md:flex-row">
+                  <select
+                    value={selectedSkill}
+                    onChange={(event) =>
+                      setSelectedSkill(
+                        event.target.value
+                      )
+                    }
+                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm"
+                  >
+                    <option value="">
+                      Select skill
+                    </option>
+
+                    {availableSkills.map((skill) => (
+                      <option
+                        key={skill.id}
+                        value={skill.id}
+                      >
+                        {skill.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={proficiency}
+                    onChange={(event) =>
+                      setProficiency(
+                        event.target.value
+                      )
+                    }
+                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm"
+                  >
+                    <option>Beginner</option>
+                    <option>Intermediate</option>
+                    <option>Advanced</option>
+                  </select>
+
+                  <button
+                    onClick={addSkill}
+                    disabled={
+                      !selectedSkill || addingSkill
+                    }
+                    className="rounded-lg bg-slate-900 px-5 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {addingSkill
+                      ? "Adding..."
+                      : "Add Skill"}
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            {/* CAREER */}
+            <section
+              id="career"
+              className="mt-8 scroll-mt-6"
+            >
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <p className="text-sm font-medium text-slate-500">
+                  Career Intelligence
+                </p>
+
+                <h2 className="mt-1 text-2xl font-bold">
+                  Career Readiness
+                </h2>
+
+                <p className="mt-2 text-slate-600">
+                  Personalized career guidance based on
+                  your profile and skills.
+                </p>
+
+                {career ? (
+                  <>
+                    <div className="mt-6 flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+                      <div>
+                        <p className="text-sm text-slate-500">
+                          Current readiness
+                        </p>
+
+                        <p className="mt-1 text-4xl font-bold">
+                          {career.readiness_score}%
+                        </p>
+
+                        <p className="mt-1 font-semibold">
+                          {career.readiness_level}
+                        </p>
+                      </div>
+
+                      <div className="h-4 w-full max-w-md overflow-hidden rounded-full bg-slate-200">
+                        <div
+                          className="h-full rounded-full bg-slate-900"
+                          style={{
+                            width: `${Math.min(
+                              100,
+                              Math.max(
+                                0,
+                                career.readiness_score
+                              )
+                            )}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-6 grid gap-5 md:grid-cols-2">
+                      <div className="rounded-xl bg-slate-50 p-5">
+                        <h3 className="font-semibold">
+                          Suggested Career Paths
+                        </h3>
+
+                        <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-600">
+                          {career.career_paths?.map(
+                            (path) => (
+                              <li key={path}>{path}</li>
+                            )
+                          )}
+                        </ul>
+                      </div>
+
+                      <div className="rounded-xl bg-slate-50 p-5">
+                        <h3 className="font-semibold">
+                          Recommended Next Steps
+                        </h3>
+
+                        <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-600">
+                          {career.recommendations?.map(
+                            (item) => (
+                              <li key={item}>{item}</li>
+                            )
+                          )}
+                        </ul>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <p className="mt-5 rounded-lg bg-slate-50 p-4 text-sm text-slate-600">
+                    Career intelligence is not available
+                    yet.
+                  </p>
+                )}
+              </div>
+            </section>
+
+            {/* NOTIFICATIONS */}
+            <section
+              id="notifications"
+              className="mt-8 scroll-mt-6"
+            >
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+                  <div>
+                    <p className="text-sm font-medium text-slate-500">
+                      Updates
+                    </p>
+
+                    <h2 className="mt-1 text-2xl font-bold">
+                      Notifications
+                    </h2>
+
+                    <p className="mt-2 text-slate-600">
+                      Recent updates from your placement
+                      activity.
                     </p>
                   </div>
 
-                  {match.missing_skills.length > 0 ? (
-                    <div className="mt-4 rounded-lg bg-gray-50 p-4">
-                      <h4 className="font-semibold">
-                        Skill Gap Analysis
-                      </h4>
-
-                      <p className="mt-1 text-sm text-gray-600">
-                        Developing these skills could improve
-                        your alignment with this role.
-                      </p>
-
-                      <ul className="mt-3 list-disc pl-5 text-sm text-gray-700">
-                        {match.missing_skills.map((skill) => (
-                          <li key={skill}>
-                            Learn <strong>{skill}</strong>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ) : (
-                    <div className="mt-4 rounded-lg bg-gray-50 p-4">
-                      <p className="font-semibold">
-                        No current skill gaps detected.
-                      </p>
-                    </div>
-                  )}
-
-                  <button
-                    onClick={() => applyToJob(job.id)}
-                    disabled={
-                      applyingJob === job.id || alreadyApplied
-                    }
-                    className="mt-5 w-full rounded-lg bg-black px-5 py-3 text-white disabled:opacity-50"
-                  >
-                    {applyingJob === job.id
-                      ? "Applying..."
-                      : alreadyApplied
-                        ? "Applied"
-                        : "Apply Now"}
-                  </button>
+                  <span className="w-fit rounded-full bg-slate-100 px-3 py-1 text-sm font-medium">
+                    {
+                      notifications.filter(
+                        (item) => !item.is_read
+                      ).length
+                    }{" "}
+                    unread
+                  </span>
                 </div>
-              );
-            })}
+
+                {notifications.length === 0 ? (
+                  <p className="mt-5 rounded-lg bg-slate-50 p-4 text-sm text-slate-600">
+                    No notifications yet.
+                  </p>
+                ) : (
+                  <div className="mt-5 space-y-3">
+                    {notifications
+                      .slice(0, 10)
+                      .map((item) => (
+                        <div
+                          key={item.id}
+                          className={`rounded-xl border p-4 ${
+                            item.is_read
+                              ? "bg-white"
+                              : "bg-slate-50"
+                          }`}
+                        >
+                          <div className="flex items-start gap-3">
+                            {!item.is_read && (
+                              <span className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-slate-900" />
+                            )}
+
+                            <div>
+                              <h3 className="font-semibold">
+                                {item.title}
+                              </h3>
+
+                              <p className="mt-1 text-sm text-slate-600">
+                                {item.message}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* PROFILE */}
+            {authUser.student_id && (
+              <section className="mt-8">
+                <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                  <p className="text-sm font-medium text-slate-500">
+                    Student Profile
+                  </p>
+
+                  <h2 className="mt-1 text-2xl font-bold">
+                    Keep your profile up to date
+                  </h2>
+
+                  <div className="mt-5">
+                    <ProfileEditor
+                      studentId={authUser.student_id}
+                      onUpdated={() =>
+                        loadDashboard(
+                          authUser.student_id!
+                        )
+                      }
+                    />
+                  </div>
+                </div>
+              </section>
+            )}
+
+            <footer className="py-10 text-center text-sm text-slate-500">
+              Placement AI · Student Career & Placement
+              Platform
+            </footer>
           </div>
-        </section>
-
-        {applicationMessage && (
-          <div className="mt-6 rounded-lg bg-gray-100 p-4">
-            {applicationMessage}
-          </div>
-        )}
-
-        <section className="mt-8">
-          <h2 className="text-xl font-semibold">
-            Applications
-          </h2>
-
-          <div className="mt-3 space-y-3">{applications.map((application) => { const stages=["applied","shortlisted","interview","selected"]; const currentIndex=stages.indexOf(application.status); return (<div key={application.id} className="rounded-lg bg-white p-4 shadow"><h3 className="font-semibold">{application.job_title}</h3><p className="text-gray-600">{application.company}</p><div className="mt-4">{application.status==="rejected" ? <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700">Application Rejected</div> : <div className="grid grid-cols-4 gap-2">{stages.map((stage,index)=><div key={stage} className="text-center"><div className={`mx-auto flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${index<=currentIndex ? "bg-black text-white" : "bg-gray-200 text-gray-500"}`}>{index+1}</div><p className="mt-1 text-xs capitalize">{stage}</p></div>)}</div>}</div><div className="mt-3 flex items-center gap-3"><span className="text-sm">Update:</span><select value={application.status} onChange={(e)=>updateApplicationStatus(application.id,e.target.value)} className="rounded border px-2 py-1 text-sm"><option value="applied">Applied</option><option value="shortlisted">Shortlisted</option><option value="interview">Interview</option><option value="selected">Selected</option><option value="rejected">Rejected</option></select></div></div>); })}</div>
-        </section>
+        </div>
       </div>
     </main>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

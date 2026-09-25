@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+﻿from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import os
@@ -49,7 +49,17 @@ app.include_router(analytics_router)
 
 from apps.api.routers.auth import router as auth_router
 from apps.api.routers.admin import router as admin_router
+from apps.api.routers.notifications import router as notifications_router
+from apps.api.routers.recruiter import router as recruiter_router
 app.include_router(auth_router)
 app.include_router(admin_router)
+app.include_router(notifications_router)
+app.include_router(recruiter_router)
 
 
+
+
+
+
+from apps.api.routers.interview import router as interview_router
+app.include_router(interview_router)

@@ -44,6 +44,10 @@ export default function AuthScreen({
         window.location.href = "/admin";
         return;
       }
+      if (response.user.role === "recruiter") {
+        window.location.href = "/recruiter";
+        return;
+      }
       onAuthenticated(response.user);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Authentication failed.");
@@ -181,5 +185,8 @@ export default function AuthScreen({
     </main>
   );
 }
+
+
+
 
 

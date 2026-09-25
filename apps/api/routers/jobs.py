@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Query
+﻿from fastapi import APIRouter, Query
 
 from apps.api.db.connection import get_connection
 
@@ -53,9 +53,13 @@ def get_jobs(
             "description": row[3],
             "location": row[4],
             "job_type": row[5],
-            "required_skills": row[6],
+            "required_skills": [s.strip().strip('{}"') for s in (row[6] if isinstance(row[6], (list, tuple)) else str(row[6] or "").replace("{","").replace("}","").replace('""','').split(",")) if s.strip().strip('{}"')],
         }
         for row in rows
     ]
 
     return {"jobs": jobs}
+
+
+
+

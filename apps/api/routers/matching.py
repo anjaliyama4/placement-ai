@@ -36,8 +36,8 @@ def match_student_to_job(student_id: int, job_id: int):
     }
 
     required_skill_map = {
-    skill.strip().lower(): skill.strip()
-    for skill in (job_row[2] or "").split(",")
+    skill.strip().strip(chr(34)).lower(): skill.strip().strip(chr(34))
+    for skill in str(job_row[2] or "").strip("{}").split(",")
     if skill.strip()
     }
 

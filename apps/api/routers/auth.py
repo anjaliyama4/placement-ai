@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+﻿from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, HTTPException
 from jose import jwt
@@ -9,7 +9,12 @@ from apps.api.db.connection import get_connection
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-SECRET_KEY = "placement-ai-development-secret"
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
@@ -148,3 +153,4 @@ def login(request: LoginRequest):
             "role": user[3],
         },
     }
+
