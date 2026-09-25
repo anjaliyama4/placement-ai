@@ -1,8 +1,13 @@
+﻿from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 
-SECRET_KEY = "placement-ai-development-secret"
+SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 ALGORITHM = "HS256"
 
 security = HTTPBearer()
@@ -25,3 +30,5 @@ def require_admin(user=Depends(get_current_user)):
     if user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
     return user
+
+
