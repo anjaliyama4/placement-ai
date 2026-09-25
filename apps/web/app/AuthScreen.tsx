@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { loginUser, registerUser, saveAuth } from "./auth";
@@ -40,6 +40,10 @@ export default function AuthScreen({
             });
 
       saveAuth(response);
+      if (response.user.role === "admin") {
+        window.location.href = "/admin";
+        return;
+      }
       onAuthenticated(response.user);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Authentication failed.");
@@ -177,3 +181,5 @@ export default function AuthScreen({
     </main>
   );
 }
+
+

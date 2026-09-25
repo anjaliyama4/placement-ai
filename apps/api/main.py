@@ -48,4 +48,8 @@ from apps.api.routers.analytics import router as analytics_router
 app.include_router(analytics_router)
 
 from apps.api.routers.auth import router as auth_router
+from apps.api.routers.admin import router as admin_router
 app.include_router(auth_router)
+app.include_router(admin_router)
+
+

@@ -39,50 +39,39 @@ def verify_password(password: str, password_hash: str) -> bool:
     return pwd_context.verify(password, password_hash)
 
 
-def create_access_token(user_id: int) -> str:
+def create_access_token(user_id: int, role: str = "student") -> str:
     expires_at = datetime.now(timezone.utc) + timedelta(
         minutes=ACCESS_TOKEN_EXPIRE_MINUTES
     )
-
     payload = {
         "sub": str(user_id),
+        "role": role,
         "exp": expires_at,
     }
-
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 
 @router.post("/register")
 def register(request: RegisterRequest):
     if len(request.password) < 8:
-        raise HTTPException(
-            status_code=400,
-            detail="Password must be at least 8 characters",
-        )
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
 
     with get_connection() as conn:
         existing_user = conn.execute(
-            """
-            SELECT id
-            FROM users
-            WHERE email = %s
-            """,
+            "SELECT id FROM users WHERE email = %s",
             (request.email,),
         ).fetchone()
 
         if existing_user:
-            raise HTTPException(
-                status_code=400,
-                detail="Email already registered",
-            )
+            raise HTTPException(status_code=400, detail="Email already registered")
 
         password_hash = hash_password(request.password)
 
         user = conn.execute(
             """
-            INSERT INTO users (email, password_hash)
-            VALUES (%s, %s)
-            RETURNING id
+            INSERT INTO users (email, password_hash, role)
+            VALUES (%s, %s, 'student')
+            RETURNING id, role
             """,
             (request.email, password_hash),
         ).fetchone()
@@ -90,14 +79,7 @@ def register(request: RegisterRequest):
         student = conn.execute(
             """
             INSERT INTO student_profiles
-                (
-                    user_id,
-                    full_name,
-                    college,
-                    degree,
-                    graduation_year,
-                    cgpa
-                )
+                (user_id, full_name, college, degree, graduation_year, cgpa)
             VALUES
                 (%s, %s, %s, %s, %s, %s)
             RETURNING id
@@ -112,7 +94,7 @@ def register(request: RegisterRequest):
             ),
         ).fetchone()
 
-    access_token = create_access_token(user[0])
+    access_token = create_access_token(user[0], user[1])
 
     return {
         "message": "Registration successful",
@@ -123,6 +105,7 @@ def register(request: RegisterRequest):
             "student_id": student[0],
             "email": request.email,
             "full_name": request.full_name,
+            "role": user[1],
         },
     }
 
@@ -132,24 +115,15 @@ def login(request: LoginRequest):
     with get_connection() as conn:
         user = conn.execute(
             """
-            SELECT id, email, password_hash
+            SELECT id, email, password_hash, role
             FROM users
             WHERE email = %s
             """,
             (request.email,),
         ).fetchone()
 
-        if not user:
-            raise HTTPException(
-                status_code=401,
-                detail="Invalid email or password",
-            )
-
-        if not verify_password(request.password, user[2]):
-            raise HTTPException(
-                status_code=401,
-                detail="Invalid email or password",
-            )
+        if not user or not verify_password(request.password, user[2]):
+            raise HTTPException(status_code=401, detail="Invalid email or password")
 
         student = conn.execute(
             """
@@ -160,7 +134,7 @@ def login(request: LoginRequest):
             (user[0],),
         ).fetchone()
 
-    access_token = create_access_token(user[0])
+    access_token = create_access_token(user[0], user[3])
 
     return {
         "message": "Login successful",
@@ -171,5 +145,6 @@ def login(request: LoginRequest):
             "student_id": student[0] if student else None,
             "email": user[1],
             "full_name": student[1] if student else None,
+            "role": user[3],
         },
     }

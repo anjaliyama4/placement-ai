@@ -1,10 +1,11 @@
-const API_URL = "http://127.0.0.1:8001";
+﻿const API_URL = "http://127.0.0.1:8001";
 
 export type AuthUser = {
   id: number;
   student_id: number | null;
   email: string;
   full_name: string | null;
+  role: string;
 };
 
 export type AuthResponse = {
@@ -119,3 +120,5 @@ export function logoutUser() {
   localStorage.removeItem("placement_ai_token");
   localStorage.removeItem("placement_ai_user");
 }
+
+
