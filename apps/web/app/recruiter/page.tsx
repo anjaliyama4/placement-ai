@@ -35,8 +35,8 @@ export default function RecruiterPage() {
 
   const load = async () => {
     const [jobsRes, appsRes] = await Promise.all([
-      authenticatedFetch("http://127.0.0.1:8001/recruiter/jobs"),
-      authenticatedFetch("http://127.0.0.1:8001/recruiter/applications"),
+      authenticatedFetch("https://placement-ai-api-2f64.onrender.com/recruiter/jobs"),
+      authenticatedFetch("https://placement-ai-api-2f64.onrender.com/recruiter/applications"),
     ]);
     if (jobsRes.ok) setJobs((await jobsRes.json()).jobs);
     if (appsRes.ok) setApplications((await appsRes.json()).applications);
@@ -51,7 +51,7 @@ export default function RecruiterPage() {
   const createJob = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage("");
-    const res = await authenticatedFetch("http://127.0.0.1:8001/recruiter/jobs", {
+    const res = await authenticatedFetch("https://placement-ai-api-2f64.onrender.com/recruiter/jobs", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -70,13 +70,13 @@ export default function RecruiterPage() {
   const loadCandidates = async (jobId: number) => {
     setSelectedJob(jobId);
     setLoadingCandidates(true);
-    const res = await authenticatedFetch(`http://127.0.0.1:8001/recruiter/jobs/${jobId}/candidates`);
+    const res = await authenticatedFetch(`https://placement-ai-api-2f64.onrender.com/recruiter/jobs/${jobId}/candidates`);
     if (res.ok) setCandidates((await res.json()).candidates);
     setLoadingCandidates(false);
   };
 
   const updateStatus = async (id: number, status: string) => {
-    await authenticatedFetch(`http://127.0.0.1:8001/recruiter/applications/${id}/status`, {
+    await authenticatedFetch(`https://placement-ai-api-2f64.onrender.com/recruiter/applications/${id}/status`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
@@ -228,3 +228,4 @@ export default function RecruiterPage() {
     </main>
   );
 }
+
