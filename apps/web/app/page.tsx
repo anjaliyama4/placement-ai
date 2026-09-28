@@ -1,4 +1,4 @@
-ï»¿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import {
@@ -10,7 +10,7 @@ import {
 import ProfileEditor from "./ProfileEditor";
 import AuthScreen from "./AuthScreen";
 
-const API_URL = "http://127.0.0.1:8001";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8001";
 
 type Student = {
   id: number;
@@ -1006,7 +1006,7 @@ export default function Home() {
 
                           <p className="mt-4 text-sm text-slate-500">
                             {job.location || "Location not specified"}
-                            {" Â· "}
+                            {" · "}
                             {job.job_type ||
                               "Job type not specified"}
                           </p>
@@ -1481,7 +1481,7 @@ export default function Home() {
             )}
 
             <footer className="py-10 text-center text-sm text-slate-500">
-              Placement AI Â· Student Career & Placement
+              Placement AI · Student Career & Placement
               Platform
             </footer>
           </div>
