@@ -1006,7 +1006,7 @@ export default function Home() {
 
                           <p className="mt-4 text-sm text-slate-500">
                             {job.location || "Location not specified"}
-                            {" · "}
+                            {" ï¿½ "}
                             {job.job_type ||
                               "Job type not specified"}
                           </p>
@@ -1481,7 +1481,7 @@ export default function Home() {
             )}
 
             <footer className="py-10 text-center text-sm text-slate-500">
-              Placement AI · Student Career & Placement
+              Placement AI ï¿½ Student Career & Placement
               Platform
             </footer>
           </div>
