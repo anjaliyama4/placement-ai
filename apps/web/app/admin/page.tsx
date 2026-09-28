@@ -38,8 +38,8 @@ export default function AdminDashboard() {
     }
 
     const [jobsResponse, applicationsResponse] = await Promise.all([
-      authenticatedFetch("http://127.0.0.1:8001/admin/jobs"),
-      authenticatedFetch("http://127.0.0.1:8001/admin/applications"),
+      authenticatedFetch("https://placement-ai-api-2f64.onrender.com/admin/jobs"),
+      authenticatedFetch("https://placement-ai-api-2f64.onrender.com/admin/applications"),
     ]);
 
     if (!jobsResponse.ok || !applicationsResponse.ok) {
@@ -65,7 +65,7 @@ export default function AdminDashboard() {
 
   async function createJob() {
     const response = await authenticatedFetch(
-      "http://127.0.0.1:8001/admin/jobs",
+      "https://placement-ai-api-2f64.onrender.com/admin/jobs",
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -101,7 +101,7 @@ export default function AdminDashboard() {
 
   async function updateStatus(applicationId: number, status: string) {
     const response = await authenticatedFetch(
-      `http://127.0.0.1:8001/admin/applications/${applicationId}/status`,
+      `https://placement-ai-api-2f64.onrender.com/admin/applications/${applicationId}/status`,
       {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -213,6 +213,7 @@ export default function AdminDashboard() {
     </main>
   );
 }
+
 
 
 
