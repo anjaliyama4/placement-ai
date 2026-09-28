@@ -1,4 +1,4 @@
-﻿from fastapi import FastAPI
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import os
@@ -16,7 +16,7 @@ load_dotenv("apps/api/.env")
 app = FastAPI(title="Placement AI API")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["http://localhost:3000","https://placement-ai-tau.vercel.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -63,3 +63,4 @@ app.include_router(recruiter_router)
 
 from apps.api.routers.interview import router as interview_router
 app.include_router(interview_router)
+
